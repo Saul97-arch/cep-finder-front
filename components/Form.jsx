@@ -7,6 +7,7 @@ function Form() {
   const [infoCep, setInfoCep] = useState("");
   const [cep, cepInput] = useInput({ type: "text" });
   const [dbHistory, setDbHistory] = useState(null);
+  const [invalidCep, setInvalidCep] = useState(false);
   // Histórico de ceps pesquisados
   const getDb = async () => {
     try {
@@ -14,7 +15,6 @@ function Form() {
       setDbHistory(await response.data);
       return response.data;
     } catch (error) {
-      console.log("ERRO");
       console.error(error);
     }
   };
@@ -23,7 +23,7 @@ function Form() {
     try {
       const response = await axios.get(`https://viacep.com.br/ws/${cep}/json/`);
       setInfoCep([await response.data]);
-      console.log(infoCep);
+      setInvalidCep(false);
     } catch (error) {
       console.error(error);
     }
@@ -31,29 +31,39 @@ function Form() {
 
   const sendCepInfo = async () => {
     const dbData = await getDb();
-    console.log(dbData);
-
+    const validacep = /^[0-9]{8}$/;
     if (cep === "") return;
 
-    if (dbData.find((info) => info.cep.replace(/\.|\-/g, "") == String(cep))) {
-      const dataInCache = dbData.filter((data) => data.cep.replace(/\.|\-/g, "") === cep);
-      setInfoCep(dataInCache);
-      console.log("INFO BREAKO", infoCep);
-      console.log(infoCep);
-      return;
-    } else {
-      console.log("IT MUST NOT BE!");
-      try {
-        await getCep();
-        const response = await axios.post(
-          "http://localhost:8000/ceps",
-          infoCep[0]
+    if (validacep.test(cep)) {
+      if (
+        dbData.find((info) => info.cep.replace(/\.|\-/g, "") == String(cep))
+      ) {
+        const dataInCache = dbData.filter(
+          (data) => data.cep.replace(/\.|\-/g, "") === cep
         );
-        console.log("Histórico salvo", dbHistory);
-        console.log(response);
-      } catch (error) {
-        console.error(error);
+        setInfoCep(dataInCache);
+        setInvalidCep(false);
+        return;
+      } else {
+        //if (Object.values(infoCep[0]).includes(undefined)) return;
+        
+        try {
+          await getCep();
+          const response = await axios.post(
+            "http://localhost:8000/ceps",
+            infoCep[0]
+          );
+          console.log("Histórico salvo", dbHistory);
+          console.log(response);
+        } catch (error) {
+          console.error(error);
+        }
       }
+    } else {
+      console.log(infoCep);
+      setInvalidCep(true);
+      setInfoCep("");
+      return;
     }
   };
 
@@ -71,18 +81,36 @@ function Form() {
             </label>
             {cepInput}
           </div>
-          <button type="submit" onClick={sendCepInfo}>
-            Buscar Cep
-          </button>
-          <button onClick={getDb}>ShowDb</button>
+          <div className={styles.btnContainer}>
+            <button
+              type="submit"
+              onClick={sendCepInfo}
+              className={styles.button}
+            >
+              Buscar Cep
+            </button>
+          </div>
         </form>
         <div>
           <ul>
-            <li>{infoCep[0].bairro === "" ? "Sem bairro(Cidade pequena, ou micro-zona)" :"Bairro: " + infoCep[0].bairro}</li>
+            <li>
+              {infoCep[0].bairro === ""
+                ? "Sem bairro(Cidade pequena, ou micro-zona)"
+                : "Bairro: " + infoCep[0].bairro}
+            </li>
             <li>{"Cidade: " + infoCep[0].localidade}</li>
-            <li>{infoCep[0].logradouro === "" ? "Sem logradouro" : "Logradouro: " + infoCep[0].logradouro}</li>
+            <li>
+              {infoCep[0].logradouro === ""
+                ? "Sem logradouro"
+                : "Logradouro: " + infoCep[0].logradouro}
+            </li>
           </ul>
         </div>
+        {invalidCep ?
+        <div className={styles.err}>
+          <p>Cep Inválido!</p>
+        </div>
+        : <div></div>}
       </div>
     );
   } else {
@@ -95,10 +123,22 @@ function Form() {
             </label>
             {cepInput}
           </div>
-          <button type="submit" onClick={sendCepInfo}>
-            Buscar Cep
-          </button>
+          <div className={styles.btnContainer}>
+            <button
+              type="submit"
+              onClick={sendCepInfo}
+              className={styles.button}
+            >
+              Buscar Cep
+            </button>
+          </div>
         </form>
+
+        {invalidCep ?
+        <div className={styles.err}>
+          <p>Cep Inválido!</p>
+        </div>
+        : <div></div>}
       </div>
     );
   }
