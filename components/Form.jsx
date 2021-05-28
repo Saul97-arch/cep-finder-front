@@ -32,6 +32,7 @@ function Form() {
   const sendCepInfo = async () => {
     const dbData = await getDb();
     const validacep = /^[0-9]{8}$/;
+
     if (cep === "") return;
 
     if (validacep.test(cep)) {
@@ -45,8 +46,6 @@ function Form() {
         setInvalidCep(false);
         return;
       } else {
-        //if (Object.values(infoCep[0]).includes(undefined)) return;
-        
         try {
           await getCep();
           const response = await axios.post(
